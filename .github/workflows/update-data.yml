@@ -1,7 +1,9 @@
 name: Mettre à jour les données TDS
 on:
   schedule:
-    - cron: "*/30 * * * *"
+    # - cron: "*/30 * * * *"      # ancien rythme : toutes les 30 minutes (désactivé)
+    # - cron: "17 23 * * *"       # ancien rythme : tous les jours à 23h17 UTC (1h17 à Paris)
+    - cron: "17 5,11,17,23 * * *"       # actuel rythme : tous les jours à 05h17 + 11h17 + 17h17 + 23h17 UTC (1h17 à Paris)
   workflow_dispatch:
     inputs:
       display:
