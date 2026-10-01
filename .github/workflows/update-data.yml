@@ -46,5 +46,6 @@ jobs:
             echo "Aucun changement"
           else
             git commit -m "Mise à jour des mesures"
+            git pull --rebase -X theirs origin main
             git push
           fi
