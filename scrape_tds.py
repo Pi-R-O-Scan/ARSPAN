@@ -37,6 +37,8 @@ import requests
 BASE = os.environ.get("TDS_BASE", "https://tds.hydraedre.com/visualisation/index.php")
 PAGES = [p.strip() for p in os.environ.get("TDS_PAGES", "custom_1029").split(",") if p.strip()]
 OUT_FILE = os.environ.get("OUT_FILE", "docs/data.json")
+# Aucune mesure antérieure à cette date n'est conservée (1er octobre 2026, 00h00 heure de Paris)
+FROM_DATE = os.environ.get("TDS_FROM", "2026-10-01T00:00:00+02:00")
 USER = os.environ.get("TDS_USER", "")
 PASSWORD = os.environ.get("TDS_PASS", "")
 DISPLAY = os.environ.get("TDS_DISPLAY", "").strip()
@@ -284,7 +286,12 @@ def main():
     if not fresh:
         sys.exit("Aucun graphique trouvé : le fichier de sortie n'est pas modifié.")
     all_charts = merge_charts(load_existing(OUT_FILE), fresh)
-    out = {"updated": datetime.now(timezone.utc).isoformat(timespec="seconds"), "charts": all_charts}
+    # Supprime systématiquement les mesures antérieures à la mise en route
+    cut = int(datetime.fromisoformat(FROM_DATE).timestamp() * 1000)
+    for chart in all_charts.values():
+        for s in chart["series"]:
+            s["points"] = [p for p in s["points"] if p[0] >= cut]
+    out ={"updated": datetime.now(timezone.utc).isoformat(timespec="seconds"), "charts": all_charts}
     os.makedirs(os.path.dirname(OUT_FILE) or ".", exist_ok=True)
     with open(OUT_FILE, "w", encoding="utf-8") as fh:
         json.dump(out, fh, ensure_ascii=False, separators=(",", ":"))
