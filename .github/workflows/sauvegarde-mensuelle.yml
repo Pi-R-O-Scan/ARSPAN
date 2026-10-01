@@ -1,1 +1,44 @@
-
+name: Sauvegarde mensuelle Excel
+on:
+  schedule:
+    # Le 1er de chaque mois à 01h17 UTC = 03h17 à Paris en heure d'été (02h17 en heure d'hiver)
+    - cron: "37 21 1 * *"
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: tds-update
+  cancel-in-progress: false
+jobs:
+  sauvegarde:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Installer openpyxl
+        run: pip install openpyxl
+      - name: Générer le fichier Excel
+        run: python export_xlsx.py
+      - name: Conserver le fichier (téléchargeable 90 jours dans Actions)
+        uses: actions/upload-artifact@v4
+        with:
+          name: sauvegarde-excel
+          path: sauvegardes/*.xlsx
+          retention-days: 90
+      - name: Enregistrer dans le dépôt (dossier sauvegardes)
+        run: |
+          git config user.name "tds-bot"
+          git config user.email "tds-bot@users.noreply.github.com"
+          git add sauvegardes/
+          if git diff --cached --quiet; then
+            echo "Aucun changement"
+            exit 0
+          fi
+          git commit -m "Sauvegarde mensuelle Excel"
+          for i in 1 2 3; do
+            git pull --rebase -X theirs origin main && git push && exit 0
+            sleep 5
+          done
+          exit 1
